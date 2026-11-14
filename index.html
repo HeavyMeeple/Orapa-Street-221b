@@ -41,6 +41,7 @@ svg{width:100%;height:auto;display:block;touch-action:manipulation}
 .token-entry{display:inline-flex;align-items:center;margin:2px 5px 2px 0;padding:3px;border:1px solid var(--bd);border-radius:9px;background:color-mix(in srgb,var(--card) 90%,var(--gold) 10%)}
 .dir-choice{cursor:pointer}.dir-choice circle{fill:var(--card);stroke:var(--ac);stroke-width:1.7}.dir-choice text{fill:var(--fg);font-size:11px;font-weight:800;pointer-events:none}.dir-choice.on circle{fill:var(--ac)}.dir-choice.on text{fill:#fff9ee}
 .sw{display:inline-block;width:13px;height:13px;border-radius:3px;border:1px solid #888;vertical-align:-2px}
+.history-color{display:inline-flex;align-items:center;gap:5px;font-weight:700}.history-color .sw{width:11px;height:11px;border-radius:50%;flex:0 0 11px}
 .msg{font-size:13px}.bad{color:#bd3328}.ok{color:#247650}
 #used{display:flex;align-items:center;flex-wrap:wrap;gap:3px;margin-top:12px;font-weight:650}
 #msg:empty,#used:empty,#history:empty,#codeMsg:empty,#res:empty{display:none}
@@ -88,7 +89,7 @@ svg{width:100%;height:auto;display:block;touch-action:manipulation}
 <div class="msg" id="msg"></div>
 </div>
 <div class="card">
-<div class="row"><b>Fire Laser</b><select id="pp"></select><select id="pd" hidden></select><button id="fire">Fire</button></div>
+<div class="row"><b>Fire A Brainwave</b><select id="pp"></select><select id="pd"></select><button id="fire">Fire</button></div>
 <div id="res" class="msg"></div>
 <div class="row"><button id="reveal" hidden>👁 Reveal</button></div>
 <div id="history" class="msg"></div>
@@ -197,7 +198,7 @@ function draw(){const G=derive(),W=10.5*U+2*M,Hh=7*H3*U+2*M,s=$('svg');s.setAttr
  $('codeOut').value=ids.length?encodePuzzle():'';
  $('used').innerHTML=(mode=='manual'||mode=='r6'||mode=='r7')&&ids.length?'<b>Tokens used:</b> '+ids.map(i=>`<span class="token-entry" title="Token #${i}: ${SH[i-1].n}">${tokenIcon(i)}</span>`).join(' '):'';
  $('reveal').hidden=mode=='manual';$('reveal').textContent=revealed?'🙈 Hide Answer':'👁 Reveal Answer';
- $('history').innerHTML=history.length?'<b>History</b><br>'+history.map((x,i)=>`${i+1}. Asked ${x.q} → Exit ${x.out} · ${x.color}${x.duplicate?' <span class="bad">(Repeated)</span>':''}`).join('<br>'):'';
+ $('history').innerHTML=history.length?'<b>History</b><br>'+history.map((x,i)=>`${i+1}. Asked ${x.q} → Exit ${x.out} · <span class="history-color"><span class="sw" style="background:${x.hex||'#eee9df'}"></span>${x.color}</span>${x.duplicate?' <span class="bad">(Repeated)</span>':''}`).join('<br>'):'';
  $('msg').innerHTML=(mode=='manual'&&ids.length?`${ids.length} tokens · Colors: ${[...cols].map(c=>CN[c]).join(', ')}`+(ids.length>=5&&cols.size<4?'<br><span class="bad">All 4 token colors are required.</span>':''):'')+errs.map(x=>`<br><span class="bad">⚠ ${x}</span>`).join('')+(mode=='manual'&&ids.length&&!errs.length?'<br><span class="ok">Placement rules passed.</span>':'')}
 function ui(){$('toks').innerHTML=SH.map((t,i)=>`<button data-t="${i+1}" class="${sel==i+1?'on':''}" title="${t.n}">${tokenIcon(i+1)} <small>#${i+1}${P[i+1]?' ✓':''}</small></button>`).join('')}
 $('svg').onclick=e=>{const direction=e.target.closest('[data-direction]');if(direction){$('pd').value=direction.dataset.direction;draw();return}const port=e.target.closest('[data-port]');if(port){$('pp').value=port.dataset.port;activePort=port.dataset.port;dopt();draw();return}if(mode!='manual')return;const s=$('svg'),q=s.createSVGPoint();q.x=e.clientX;q.y=e.clientY;const m=q.matrixTransform(s.getScreenCTM().inverse());
@@ -211,7 +212,7 @@ $('pp').innerHTML=ordP.map(p=>`<option>${p.label}</option>`).join('');
 const pOf=l=>ports.find(p=>p.label==l);
 function dopt(){$('pd').innerHTML=Object.keys(DIRS[pOf($('pp').value).kind]).map(l=>`<option>${l}</option>`).join('')}
 $('pp').onchange=()=>{activePort=$('pp').value;dopt();draw()};dopt();
-$('fire').onclick=()=>{derive();const p=pOf($('pp').value),d=$('pd').value,q=p.label+d,r=fire(p,d),color=mixName(r.cs),duplicate=history.some(x=>x.q==q);path=r.traces;fireResult={port:r.out,dir:r.dir,color:mixHex(r.cs),name:color};history.push({q,out:r.out+r.dir,color,duplicate});$('res').innerHTML=`${duplicate?'<span class="bad">⚠ This question was already asked.</span><br>':''}Fired <b>${q}</b>  → Exit <b>${r.out}${r.dir}</b> Color <b>${color}</b>`;draw()};
+$('fire').onclick=()=>{derive();const p=pOf($('pp').value),d=$('pd').value,q=p.label+d,r=fire(p,d),color=mixName(r.cs),duplicate=history.some(x=>x.q==q);path=r.traces;fireResult={port:r.out,dir:r.dir,color:mixHex(r.cs),name:color};history.push({q,out:r.out+r.dir,color,hex:mixHex(r.cs),duplicate});$('res').innerHTML=`${duplicate?'<span class="bad">⚠ This question was already asked.</span><br>':''}Fired <b>${q}</b>  → Exit <b>${r.out}${r.dir}</b> Color <b>${color}</b>`;draw()};
 $('reveal').onclick=()=>{revealed=!revealed;draw()};
 $('copyCode').onclick=async()=>{const code=$('codeOut').value;if(!code){$('codeMsg').textContent='No puzzle code to copy yet.';return}try{await navigator.clipboard.writeText(code);$('codeMsg').textContent='Code copied. Share it with a friend.'}catch(e){$('codeOut').focus();$('codeOut').select();const ok=document.execCommand('copy');$('codeMsg').textContent=ok?'Code copied. Share it with a friend.':'Select the code field and copy it.'}};
 $('loadCode').onclick=()=>{try{P=decodePuzzle($('codeIn').value.trim());fireResult=null;const n=Object.keys(P).length;mode=n==5?'r5':n==6?'r6':n==7?'r7':'manual';path=[];history=[];revealed=false;activePort=null;$('res').innerHTML='';$('codeMsg').textContent='Puzzle loaded from code.';$('home').hidden=true;$('app').hidden=false;$('manual').hidden=mode!='manual';$('rr').hidden=mode=='manual';$('ttl').textContent=mode=='manual'?'Imported Puzzle':`Random ${n} Tokens`;ui();draw()}catch(e){$('codeMsg').textContent='Could not load code: '+e.message}};
